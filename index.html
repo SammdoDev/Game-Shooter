@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Game Shooter - Banyak Musuh</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@iconscout/unicons@4.0.0/css/line.css"
+    />
+
     <style>
       body {
         text-align: center;
@@ -11,6 +20,7 @@
         margin: 0;
         overflow: hidden;
         touch-action: none;
+        position: relative;
       }
 
       body::-webkit-scrollbar {
@@ -36,24 +46,57 @@
       }
 
       button {
-        padding: 10px 20px;
-        background-color: #4caf50;
+        padding: 12px 14px;
+        background: linear-gradient(145deg, #5ec65a, #3c9c46);
         color: white;
         border: none;
         font-size: 16px;
         cursor: pointer;
+        border-radius: 50%; /* Membuat tombol lebih bulat */
+        box-shadow: 4px 4px 8px #2e7d32, -4px -4px 8px #66bb6a; /* Efek retro neumorphism */
+        font-family: "Press Start 2P", cursive;
+        text-transform: uppercase;
+        transition: all 0.2s ease-in-out;
       }
 
       button:hover {
-        background-color: #45a049;
+        background: linear-gradient(145deg, #45a049, #388e3c);
+        box-shadow: 2px 2px 6px #2e7d32, -2px -2px 6px #66bb6a;
+      }
+
+      button:active {
+        background: #388e3c;
+        box-shadow: inset 2px 2px 6px #2e7d32, inset -2px -2px 6px #66bb6a;
       }
 
       #restartBtn {
         position: absolute;
-        top: 80%;
+        top: 60%;
         left: 50%;
         transform: translate(-50%, -50%);
         display: none;
+
+        font-family: "Press Start 2P", cursive;
+        font-size: 14px;
+        color: #fff;
+        background: linear-gradient(to bottom, #ffafbd, #ffc3a0);
+        border: 4px solid #ff758c;
+        padding: 12px 24px;
+        text-transform: uppercase;
+        cursor: pointer;
+        border-radius: 8px;
+        box-shadow: 4px 4px 0 #d64161;
+        transition: all 0.2s ease-in-out;
+      }
+
+      #restartBtn:hover {
+        background: linear-gradient(to bottom, #ffc3a0, #ffafbd);
+        box-shadow: 2px 2px 0 #d64161;
+      }
+
+      #restartBtn:active {
+        box-shadow: none;
+        transform: translate(-50%, -50%) translateY(4px);
       }
 
       #mobileControls {
@@ -79,7 +122,7 @@
         user-select: none;
       }
 
-      #soundControls {
+      #pauseControl {
         position: fixed;
         top: 10px;
         right: 10px;
@@ -88,7 +131,7 @@
         padding: 5px;
       }
 
-      #soundToggle {
+      #pauseBtn {
         margin-right: 10px;
       }
     </style>
@@ -101,13 +144,17 @@
     <canvas id="gameCanvas" width="1024" height="768"></canvas>
     <button id="restartBtn">Restart</button>
 
-    <div id="soundControls">
-      <button id="soundToggle">🔊</button>
+    <div id="pauseControl">
+      <button id="pauseBtn">
+        <i class="uil uil-pause" id="pauseIcon"></i>
+      </button>
     </div>
 
     <div id="mobileControls">
       <div id="leftBtn" class="controlBtn">←</div>
-      <div id="fireBtn" class="controlBtn">🔥</div>
+      <div id="fireBtn" class="controlBtn">
+        <img src="./Assets/bullet.png" />
+      </div>
       <div id="rightBtn" class="controlBtn">→</div>
     </div>
 
@@ -115,14 +162,18 @@
       const canvas = document.getElementById("gameCanvas");
       const ctx = canvas.getContext("2d");
       const restartBtn = document.getElementById("restartBtn");
-      const soundToggle = document.getElementById("soundToggle");
+      const pauseBtn = document.getElementById("pauseBtn");
+      const pauseIcon = document.getElementById("pauseIcon");
       const mobileControls = document.getElementById("mobileControls");
       const leftBtn = document.getElementById("leftBtn");
       const rightBtn = document.getElementById("rightBtn");
       const fireBtn = document.getElementById("fireBtn");
 
       // Check if it's a mobile device
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isMobile =
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+          navigator.userAgent
+        );
       if (isMobile) {
         mobileControls.style.display = "flex";
       }
@@ -153,25 +204,35 @@
       bgMusic.loop = true;
       bgMusic.volume = 0.5;
 
-      // Sound control
-      let soundEnabled = true;
-      soundToggle.addEventListener("click", () => {
-        soundEnabled = !soundEnabled;
-        soundToggle.textContent = soundEnabled ? "🔊" : "🔇";
-        
-        if (soundEnabled) {
-          bgMusic.play().catch(e => console.log("Audio play prevented:", e));
-        } else {
+      // Game pause state
+      let gamePaused = false;
+
+      // Pause/resume control
+      pauseBtn.addEventListener("click", () => {
+        gamePaused = !gamePaused;
+
+        if (gamePaused) {
+          pauseIcon.className = "uil uil-play";
           bgMusic.pause();
+        } else {
+          pauseIcon.className = "uil uil-pause";
+          if (!gameOver) {
+            bgMusic
+              .play()
+              .catch((e) => console.log("Audio play prevented:", e));
+            requestAnimationFrame(update);
+          }
         }
       });
 
       // Play a sound with error handling
       function playSound(sound) {
-        if (soundEnabled) {
+        if (!gamePaused) {
           // Clone the audio to allow overlapping sounds
           const soundClone = sound.cloneNode();
-          soundClone.play().catch(e => console.log("Audio play prevented:", e));
+          soundClone
+            .play()
+            .catch((e) => console.log("Audio play prevented:", e));
         }
       }
 
@@ -198,7 +259,7 @@
       let currentWave = 1;
       let enemiesKilledInWave = 0;
       let enemiesPerWave = 10;
-      
+
       // Touch controls variables
       let leftPressed = false;
       let rightPressed = false;
@@ -215,33 +276,37 @@
       function initializeGame() {
         // Responsive canvas sizing
         resizeCanvas();
-        
+
         player = {
           x: canvas.width / 2,
           y: canvas.height - 100,
           size: 40,
           speed: 5,
         };
-        
+
         enemies = [];
         enemyCount = 5 + currentWave;
         for (let i = 0; i < enemyCount; i++) {
           enemies.push(spawnEnemy());
         }
-        
+
         bullets = [];
         score = 0;
         lives = 3;
         currentWave = 1;
         enemiesKilledInWave = 0;
         gameOver = false;
+        gamePaused = false;
+        pauseIcon.className = "uil uil-pause";
         restartBtn.style.display = "none";
-        
+
         // Try to play background music
-        if (soundEnabled) {
-          bgMusic.play().catch(e => console.log("Background music play prevented:", e));
+        if (!gamePaused) {
+          bgMusic
+            .play()
+            .catch((e) => console.log("Background music play prevented:", e));
         }
-        
+
         update();
       }
 
@@ -249,37 +314,37 @@
         // Keep the aspect ratio but make it fit the screen
         const maxWidth = window.innerWidth - 40;
         const maxHeight = window.innerHeight - 120;
-        
+
         // Maintain the aspect ratio
         const ratio = canvas.width / canvas.height;
-        
+
         if (maxWidth / ratio > maxHeight) {
           canvas.style.height = maxHeight + "px";
-          canvas.style.width = (maxHeight * ratio) + "px";
+          canvas.style.width = maxHeight * ratio + "px";
         } else {
           canvas.style.width = maxWidth + "px";
-          canvas.style.height = (maxWidth / ratio) + "px";
+          canvas.style.height = maxWidth / ratio + "px";
         }
       }
 
       // Keyboard controls
       window.addEventListener("keydown", (e) => (keys[e.code] = true));
       window.addEventListener("keyup", (e) => delete keys[e.code]);
-      
+
       // Mobile touch controls
-      leftBtn.addEventListener("touchstart", () => leftPressed = true);
-      leftBtn.addEventListener("touchend", () => leftPressed = false);
-      rightBtn.addEventListener("touchstart", () => rightPressed = true);
-      rightBtn.addEventListener("touchend", () => rightPressed = false);
+      leftBtn.addEventListener("touchstart", () => (leftPressed = true));
+      leftBtn.addEventListener("touchend", () => (leftPressed = false));
+      rightBtn.addEventListener("touchstart", () => (rightPressed = true));
+      rightBtn.addEventListener("touchend", () => (rightPressed = false));
       fireBtn.addEventListener("touchstart", () => {
         keys["Space"] = true;
       });
-      
+
       // For non-mobile testing with mouse
-      leftBtn.addEventListener("mousedown", () => leftPressed = true);
-      leftBtn.addEventListener("mouseup", () => leftPressed = false);
-      rightBtn.addEventListener("mousedown", () => rightPressed = true);
-      rightBtn.addEventListener("mouseup", () => rightPressed = false);
+      leftBtn.addEventListener("mousedown", () => (leftPressed = true));
+      leftBtn.addEventListener("mouseup", () => (leftPressed = false));
+      rightBtn.addEventListener("mousedown", () => (rightPressed = true));
+      rightBtn.addEventListener("mouseup", () => (rightPressed = false));
       fireBtn.addEventListener("mousedown", () => {
         keys["Space"] = true;
       });
@@ -290,12 +355,20 @@
           return;
         }
 
+        if (gamePaused) {
+          showPauseScreen();
+          return;
+        }
+
         // Handle keyboard or touch controls
         if (keys["ArrowLeft"] || leftPressed) {
-          player.x = Math.max(playerWidth/2, player.x - player.speed);
+          player.x = Math.max(playerWidth / 2, player.x - player.speed);
         }
         if (keys["ArrowRight"] || rightPressed) {
-          player.x = Math.min(canvas.width - playerWidth/2, player.x + player.speed);
+          player.x = Math.min(
+            canvas.width - playerWidth / 2,
+            player.x + player.speed
+          );
         }
 
         let maxBullets = 5;
@@ -315,10 +388,10 @@
         // Enemy-bullet collision detection
         for (let eIndex = enemies.length - 1; eIndex >= 0; eIndex--) {
           const enemy = enemies[eIndex];
-          
+
           for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
             const bullet = bullets[bIndex];
-            
+
             if (
               bullet.y - bullet.radius < enemy.y + enemy.size &&
               bullet.x > enemy.x - enemy.size &&
@@ -329,22 +402,22 @@
               enemies.push(spawnEnemy());
               score += 1;
               enemiesKilledInWave += 1;
-              
+
               if (score > highScore) {
                 highScore = score;
                 localStorage.setItem("highScore", highScore);
               }
-              
+
               if (enemiesKilledInWave >= enemiesPerWave) {
                 currentWave++;
                 enemiesKilledInWave = 0;
-                
+
                 const newEnemies = Math.min(3, currentWave);
                 for (let i = 0; i < newEnemies; i++) {
                   enemies.push(spawnEnemy());
                 }
               }
-              
+
               playSound(hitSound);
               break;
             }
@@ -355,7 +428,7 @@
         for (let bIndex = bullets.length - 1; bIndex >= 0; bIndex--) {
           const bullet = bullets[bIndex];
           bullet.y -= bullet.speed;
-          
+
           if (bullet.y + bullet.radius < 0) {
             bullets.splice(bIndex, 1);
             continue;
@@ -373,16 +446,16 @@
           }
 
           // Collision detection with player
-          const enemyLeft = enemy.x - enemy.size/2;
-          const enemyRight = enemy.x + enemy.size/2;
-          const enemyTop = enemy.y - enemy.size/2;
-          const enemyBottom = enemy.y + enemy.size/2;
-          
-          const playerLeft = player.x - playerWidth/2;
-          const playerRight = player.x + playerWidth/2;
-          const playerTop = player.y - playerHeight/2;
-          const playerBottom = player.y + playerHeight/2;
-          
+          const enemyLeft = enemy.x - enemy.size / 2;
+          const enemyRight = enemy.x + enemy.size / 2;
+          const enemyTop = enemy.y - enemy.size / 2;
+          const enemyBottom = enemy.y + enemy.size / 2;
+
+          const playerLeft = player.x - playerWidth / 2;
+          const playerRight = player.x + playerWidth / 2;
+          const playerTop = player.y - playerHeight / 2;
+          const playerBottom = player.y + playerHeight / 2;
+
           if (
             enemyRight > playerLeft &&
             enemyLeft < playerRight &&
@@ -390,10 +463,10 @@
             enemyTop < playerBottom
           ) {
             lives--;
-            
+
             if (lives <= 0) {
               gameOver = true;
-              
+
               if (score > highScore) {
                 highScore = score;
                 localStorage.setItem("highScore", highScore);
@@ -410,14 +483,31 @@
         requestAnimationFrame(update);
       }
 
+      function showPauseScreen() {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "white";
+        ctx.font = '36px "Press Start 2P"';
+        ctx.textAlign = "center";
+        ctx.fillText("PAUSED", canvas.width / 2, canvas.height / 2);
+
+        ctx.font = '16px "Press Start 2P"';
+        ctx.fillText(
+          "Click  ▶  to resume",
+          canvas.width / 2,
+          canvas.height / 2 + 50
+        );
+      }
+
       function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         // Draw player
         ctx.drawImage(
           playerImage,
-          player.x - playerWidth/2,
-          player.y - playerHeight/2,
+          player.x - playerWidth / 2,
+          player.y - playerHeight / 2,
           playerWidth,
           playerHeight
         );
@@ -427,7 +517,7 @@
           ctx.drawImage(
             heartImage,
             player.x - (heartSize * lives) / 2 + i * heartSize,
-            player.y - playerHeight/2 - heartSize - 10,
+            player.y - playerHeight / 2 - heartSize - 10,
             heartSize,
             heartSize
           );
@@ -455,56 +545,52 @@
 
         // Game UI text
         ctx.fillStyle = "white";
-        ctx.font = "28px Arial";
         ctx.textAlign = "left";
+        ctx.font = '18px "Press Start 2P"';
         ctx.fillText("Game Shooter", 20, canvas.height - 15);
-        
-        ctx.font = "24px Arial";
-        ctx.fillText("Skor: " + score, 220, canvas.height - 15);
-        ctx.fillText("Rekor: " + highScore, 350, canvas.height - 15);
-        ctx.fillText("Wave: " + currentWave, 520, canvas.height - 15);
-        ctx.fillText("Musuh: " + enemiesKilledInWave + "/" + enemiesPerWave, 650, canvas.height - 15);
+
+        ctx.font = '16px "Press Start 2P"';
+        ctx.fillText("Skor: " + score, 270, canvas.height - 15);
+        ctx.fillText("Rekor: " + highScore, 440, canvas.height - 15);
+        ctx.fillText("Wave: " + currentWave, 640, canvas.height - 15);
+        ctx.fillText(
+          "Musuh: " + enemiesKilledInWave + "/" + enemiesPerWave,
+          790,
+          canvas.height - 15
+        );
       }
 
       function showGameOver() {
         ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+
         ctx.fillStyle = "white";
-        ctx.font = "48px Arial";
+        ctx.font = '48px "Press Start 2P"';
         ctx.textAlign = "center";
-        ctx.fillText(
-          "Game Over",
-          canvas.width / 2,
-          canvas.height / 2 - 110
-        );
-        
-        ctx.font = "32px Arial";
+        ctx.fillText("Game Over", canvas.width / 2, canvas.height / 2 - 110);
+
+        ctx.font = '32px "Press Start 2P"';
         ctx.fillText(
           "Wave Terakhir: " + currentWave,
           canvas.width / 2,
           canvas.height / 2 - 60
         );
-        
+
         ctx.fillText(
           "Skor Akhir: " + score,
           canvas.width / 2,
           canvas.height / 2 - 20
         );
-        
+
         ctx.fillText(
           "Rekor Tertinggi: " + highScore,
           canvas.width / 2,
           canvas.height / 2 + 20
         );
-        
+
         if (score === highScore && score > 0) {
           ctx.fillStyle = "#FFD700";
-          ctx.fillText(
-            "Rekor Baru!",
-            canvas.width / 2,
-            canvas.height / 2 + 60
-          );
+          ctx.fillText("Rekor Baru!", canvas.width / 2, canvas.height / 2 + 60);
         }
 
         restartBtn.style.display = "block";
@@ -519,14 +605,14 @@
       // Wait for all assets to load
       let imagesLoaded = 0;
       const totalImages = 4;
-      
+
       function imageLoaded() {
         imagesLoaded++;
         if (imagesLoaded === totalImages) {
           initializeGame();
         }
       }
-      
+
       playerImage.onload = imageLoaded;
       enemyImage.onload = imageLoaded;
       bulletImage.onload = imageLoaded;
@@ -534,25 +620,25 @@
 
       // Add event to enable audio on first user interaction
       function enableAudio() {
-        if (soundEnabled) {
-          bgMusic.play().catch(e => console.log("Audio play prevented:", e));
+        if (!gamePaused) {
+          bgMusic.play().catch((e) => console.log("Audio play prevented:", e));
           // Pre-load sounds by playing them silently
           shootSound.volume = 0;
           hitSound.volume = 0;
-          shootSound.play().catch(e => {});
-          hitSound.play().catch(e => {});
+          shootSound.play().catch((e) => {});
+          hitSound.play().catch((e) => {});
           shootSound.volume = 1;
           hitSound.volume = 1;
         }
         // Remove event listeners after first interaction
-        document.removeEventListener('click', enableAudio);
-        document.removeEventListener('touchstart', enableAudio);
-        document.removeEventListener('keydown', enableAudio);
+        document.removeEventListener("click", enableAudio);
+        document.removeEventListener("touchstart", enableAudio);
+        document.removeEventListener("keydown", enableAudio);
       }
 
-      document.addEventListener('click', enableAudio);
-      document.addEventListener('touchstart', enableAudio);
-      document.addEventListener('keydown', enableAudio);
+      document.addEventListener("click", enableAudio);
+      document.addEventListener("touchstart", enableAudio);
+      document.addEventListener("keydown", enableAudio);
     </script>
   </body>
 </html>

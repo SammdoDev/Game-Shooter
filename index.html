@@ -52,7 +52,7 @@
         border: none;
         font-size: 16px;
         cursor: pointer;
-        border-radius: 50%; /* Membuat tombol lebih bulat */
+        border-radius: 50%;
         box-shadow: 4px 4px 8px #2e7d32, -4px -4px 8px #66bb6a; /* Efek retro neumorphism */
         font-family: "Press Start 2P", cursive;
         text-transform: uppercase;
@@ -134,6 +134,12 @@
       #pauseBtn {
         margin-right: 10px;
       }
+
+      #fireBtn img {
+        width: 20px; /* Sesuaikan ukuran bullet */
+        height: 20px;
+        object-fit: contain; /* Pastikan gambar tidak terdistorsi */
+      }
     </style>
   </head>
   <body>
@@ -153,7 +159,7 @@
     <div id="mobileControls">
       <div id="leftBtn" class="controlBtn">←</div>
       <div id="fireBtn" class="controlBtn">
-        <img src="./Assets/bullet.png" />
+        <img src="./Assets/bullet.png" height="10px" width="10px" />
       </div>
       <div id="rightBtn" class="controlBtn">→</div>
     </div>
